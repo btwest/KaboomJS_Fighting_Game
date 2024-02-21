@@ -1,7 +1,8 @@
 kaboom({
     width: 1280,
     height: 720,
-    scale: 0.7
+    scale: 0.7,
+    debug: true
 
 })
 
@@ -204,8 +205,135 @@ scene("fight", () =>{
                 player1.flipX = false
             }
         })
+        onKeyDown("a", () => {
+            run(player1, -500, true)
+        })
+        onKeyRelease("a", () => {
+            if(player1.health !== 0){
+                resetPlayerToIdle(player1)
+                player1.flipX = true
+            }
+        })
+
+        function makeJump(player){
+            if(player.health === 0){
+                return
+            }
+
+            if(player.isGrounded()){
+                const currentFlip = player.flipX
+                player.jump()
+                player.use(sprite(player.sprites.jump))
+                player.flipX = currentFlip
+                player.play("jump")
+                player.isCurrentlyJumping = true
+
+            }
+        }
+
+        function resetAfterJump(player){
+            if(player.isGrounded() && player.isCurrentlyJumping){
+                player.isCurrentlyJumping = false
+                if(player.curAnim() !== "idle"){
+                    resetPlayerToIdle(player)
+                }
+            }
+        }
+
+        onKeyDown("w", () => {
+            makeJump(player1)
+        })
+
+        player1.onUpdate(() => resetAfterJump(player1))
 
 
+
+        function attack(player, excludedKeys){
+            if(player.health === 0){
+                return
+            }
+            
+            for(const key of excludedKeys){
+                if(isKeyDown(key)){
+                    return
+                }
+            }
+
+            const currentFlip = player.flipX
+            if(player.curAnim() !== "attack"){
+                player.use(sprite(player.sprites.attack))
+                player.flipX = currentFlip
+                const slashX = player.pos.x + 30
+                const slashXFlipped = player.pos.x - 350
+                const slashY = player.pos.y - 200
+
+            
+
+            add([
+                rect(300,300),
+                area(),
+                pos(currentFlip ? slashXFlipped: slashX, slashY),
+                opacity(0),
+                player.id + "attackHitbox"
+            ])
+
+            player.play("attack", {
+                onEnd: ()=> {
+                    resetPlayerToIdle(player)
+                    player.flipX=currentFlip
+                }
+            })
+
+        }
+        }
+
+        onKeyPress("space", ()=> {
+            attack(player1, ["a", "d", "w"])
+        })
+
+        onKeyRelease("space", () =>{
+            destroyAll(player1.id + "attackHitbox")
+        })
+
+
+        const player2 = makePlayer(1000, 200, 16, 52, 4, "player2")
+        player2.use(sprite(player2.sprites.idle))
+        player2.play("idle")
+        player2.flipX = true
+
+        onKeyDown("right", () =>{
+            run(player2, 500, false)
+        })
+        onKeyRelease("right", ()=> {
+            if(player2.health !== 0){
+                resetPlayerToIdle(player2)
+                player2.flipX = false
+            }
+        })
+
+        onKeyDown("left", ()=>{
+            run(player2, -500, true)
+        })
+        onKeyRelease("left", ()=>{
+            if(player2.health !== 0){
+                resetPlayerToIdle(player2)
+                player2.flipX = true
+            }
+        })
+
+        onKeyDown("up", ()=> {
+            makeJump(player2)
+        })
+
+        player2.onUpdate(()=> resetAfterJump(player2))
+
+        onKeyPress("down", () => {
+            attack(player2, ["left", "right", "up"])
+        })
+
+        onKeyRelease("down", () =>{
+            destroyAll(player2.id + "attackHitbox")
+        })
 })
 
 go("fight")
